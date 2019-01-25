@@ -1,0 +1,20 @@
+# check that vim is not installed / uninstall vim
+#
+# install vim at version Y
+#
+# check that version Y is installed
+#
+# downgrade to version X
+#
+# check that version X is installed
+#
+# uninstall vim
+#
+# ALL THIS in a loop over a dictionary like
+# packages:
+#   ubuntu16:
+#     name: vim
+#     version: 2:7.4.1689-3ubuntu1.2
+#   ubuntu14:
+#     name: vim
+#     version: 2:7.4.052-1ubuntu3.1
