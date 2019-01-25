@@ -259,7 +259,7 @@
     that:
       - apt_result is not changed
 
-# check policy_rc_d parameter 
+# check policy_rc_d parameter
 
 - name: Install unscd but forbid service start
   apt:
