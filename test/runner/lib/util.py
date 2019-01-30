@@ -409,6 +409,10 @@ def common_environment():
     env = dict(
         LC_ALL='en_US.UTF-8',
         PATH=os.environ.get('PATH', os.path.defpath),
+        HTTP_PROXY='http://proxy.ihelse.net:3128',
+        HTTPS_PROXY='http://proxy.ihelse.net:3128',
+        http_proxy='http://proxy.ihelse.net:3128',
+        https_proxy='http://proxy.ihelse.net:3128',
     )
 
     required = (
