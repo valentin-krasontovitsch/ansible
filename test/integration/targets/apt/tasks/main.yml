@@ -17,6 +17,7 @@
 
 - block:
   - include: 'apt.yml'
+  - include: 'downgrade.yml'
 
   - include: 'apt-multiarch.yml'
     when:

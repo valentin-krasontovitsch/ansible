@@ -1,3 +1,5 @@
+# create dict of releases + versions - package versions
+#
 # check that vim is not installed / uninstall vim
 #
 # install vim at version Y
@@ -10,11 +12,116 @@
 #
 # uninstall vim
 #
-# ALL THIS in a loop over a dictionary like
-# packages:
-#   ubuntu16:
-#     name: vim
-#     version: 2:7.4.1689-3ubuntu1.2
-#   ubuntu14:
-#     name: vim
-#     version: 2:7.4.052-1ubuntu3.1
+- block:
+  - name: record packages used for downgrade testing
+    set_fact:
+      release_package_dict:
+        Ubuntu:
+          xenial:
+            package: vim
+            older_version: 2:7.4.1689-3ubuntu1
+            newer_version: 2:7.4.1689-3ubuntu1.2
+          trusty:
+            package: vim
+            older_version: 2:7.4.052-1ubuntu3.1
+            newer_version: 2:7.4.1689-3ubuntu1.2
+
+  - debug:
+      var: release_package_dict[ansible_distribution]
+  - debug:
+      var: ansible_distribution_release
+  # to make variables shorter
+  - name: record package name and versions for current distro and version
+    set_fact:
+      package: "{{release_package_dict[ansible_distribution][ansible_distribution_release]['package']}}"
+      newer_version: "{{release_package_dict[ansible_distribution][ansible_distribution_release]['newer_version']}}"
+      older_version: "{{release_package_dict[ansible_distribution][ansible_distribution_release]['older_version']}}"
+  - name: record short vars for `package=version`
+    set_fact:
+      package_newer: "{{package}}={{newer_version}}"
+      package_older: "{{package}}={{older_version}}"
+
+
+  - name: show me some output
+    debug:
+      var: release_package_dict
+  - name: show me some output
+    debug:
+      var: ansible_distribution
+  - name: show me some more output
+    debug:
+      var: ansible_distribution_release
+  - name: show me some more output
+    debug:
+      var: release_package_dict[ansible_distribution][ansible_distribution_release]["older_version"]
+  - name: show me some more output
+    debug:
+      var: package
+
+  # uninstall - clean slate
+  - name: check current {{package}} version with dpkg
+    shell: dpkg -s {{package}}
+    register: version_check
+    ignore_errors: true
+  - name: output version_check info
+    debug:
+      var: version_check
+  - name: uninstall {{package}} with apt
+    apt:
+      name: "{{package}}"
+      state: absent
+      purge: yes
+    register: uninstall_with_apt
+    when: version_check is successful
+  - name: check {{package}} with dpkg
+    shell: dpkg-query -l {{package}}
+    failed_when: False
+    register: check_package
+  - name: verify uninstallation of {{package}}
+    assert:
+      that:
+          - "'changed' in uninstall_with_apt"
+          - "check_package.rc == 1"
+  # install newer version
+  - name: install newer version of {{package}} with apt
+    apt:
+      name: "{{package_newer}}"
+    register: install_package
+  - name: check {{package}} with dpkg
+    shell: dpkg-query -l {{package}}
+    failed_when: False
+    register: check_package
+  - name: verify installation of {{package}}
+    assert:
+      that:
+          - "install_package.changed"
+          - "check_package.rc == 0"
+          - "newer_version in check_package.stdout"
+    # downgrade to older version
+  - name: install older version of {{package}} with apt and downgrade option
+    apt:
+      name: "{{package_older}}"
+      allow_downgrades: yes
+    register: downgrade_package
+  - name: check {{package}} with dpkg
+    shell: dpkg-query -l {{package}}
+    failed_when: False
+    register: check_package
+  - name: verify downgrade of {{package}}
+    assert:
+      that:
+          - "downgrade_package.changed"
+          - "check_package.rc == 0"
+          - "older_version in check_package.stdout"
+  - name: remove downgraded package
+    apt:
+      name: "{{package}}"
+      state: absent
+      purge: yes
+  - name: Reinstall original version to reestablish original state
+    debug:
+      msg: TODO - implement this!
+    when: version_check is not successful
+
+  tags:
+    - downgrade
